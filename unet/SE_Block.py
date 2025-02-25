@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 # 通道注意力模块，自适应调整通道权重
 class SEBlock(nn.Module):
+    
     # channel — 通道数；reduction - 压缩比
     def __init__(self, channel, reduction=16):
         super(SEBlock, self).__init__()
