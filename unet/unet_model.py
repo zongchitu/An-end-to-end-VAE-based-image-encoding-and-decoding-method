@@ -4,6 +4,8 @@ from .unet_parts import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from .SE_Block import SEBlock
+from .VS_Block import VariationalSampling
 
 
 # UNet主网络
@@ -48,9 +50,9 @@ class UNet(nn.Module):
         x2 = self.se2(x2)
         x3 = self.down2(x2)
         x3 = self.se3(x3)
-        x4 = self.down3(x2)
+        x4 = self.down3(x3)
         x4 = self.se4(x4)
-        x5 = self.down4(x3)
+        x5 = self.down4(x4)
         x5 = self.se5(x5)
 
         # 变分采样
@@ -68,10 +70,9 @@ class UNet(nn.Module):
 
 # 测试代码
 if __name__ == "__main__":
-    unet = UNet(n_channels=3, n_classes=1, bilinear=True, latent_dim=128)
+    unet = UNet(n_channels=3, n_classes=1, bilinear=True, latent_dim=512)
     x = torch.randn(1, 3, 32, 32)
     logits, mu, logvar = unet(x)
     print("Logits shape:", logits.size())
     print("Mu shape:", mu.size())
     print("Logvar shape:", logvar.size())
-
