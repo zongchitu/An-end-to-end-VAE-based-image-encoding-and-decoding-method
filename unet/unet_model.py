@@ -1,11 +1,11 @@
 """ Full assembly of the parts to form the complete network """
 
-from unet_parts import *
+from .unet_parts import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from SE_Block import SEBlock
-from VS_Block import VariationalSampling
+from .SE_Block import SEBlock
+from .VS_Block import VariationalSampling
 
 
 # UNet主网络

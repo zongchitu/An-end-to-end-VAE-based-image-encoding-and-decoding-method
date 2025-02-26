@@ -69,17 +69,18 @@ def mae_mse_loss(x, y):
     """
     mae_loss = nn.functional.l1_loss(x, y)
     mse_loss = nn.functional.mse_loss(x, y)
-    return mae_loss+mse_loss
+    return mae_loss + mse_loss
+
 
 def TV_loss(x):
     """
-        计算图像的全变分损失（Total Variation Loss）。
+    计算图像的全变分损失（Total Variation Loss）。
 
-        参数:
-        - x: output，形状为 (batch_size, channels, height, width)
+    参数:
+    - x: output，形状为 (batch_size, channels, height, width)
 
-        返回:
-        - TV Loss: 全变分损失的标量
+    返回:
+    - TV Loss: 全变分损失的标量
     """
     # 计算水平方向和垂直方向的梯度
     dx = x[:, :, :, 1:] - x[:, :, :, :-1]  # 水平方向的差异
@@ -101,6 +102,7 @@ def TV_loss(x):
 
     return tv_loss
 
+
 def latent_space_kl_divergence_loss(mu, logvar):
     """
     计算 VAE 的 KL 散度损失。衡量潜在空间的分布与标准正态分布之间的差异。
@@ -116,26 +118,32 @@ def latent_space_kl_divergence_loss(mu, logvar):
     return kl_loss
 
 
-def compute_total_loss(model_output,model_input,mu,logvar,vgg_model,layers=None):
+def compute_total_loss(model_output, model_input, mu, logvar, vgg_model, layers=None):
     # 经验参数，请根据实际情况调整
     # MAE,MSE,潜在空间KL散度损失是主要的损失函数，权重大,给1
     # 感知损失,TV损失是辅助的损失函数，权重小，给0.1,0.01（经验参数）
-    total_loss=mae_mse_loss(model_output,model_input) + 0.1*perceptual_loss(model_output,model_input,vgg_model,layers) + latent_space_kl_divergence_loss(mu, logvar) + 0.01*TV_loss(model_output)
+
+    # 去掉感知损失能够正常运行
+    # total_loss=mae_mse_loss(model_output,model_input) + 0.1*perceptual_loss(model_output,model_input,vgg_model,layers) + latent_space_kl_divergence_loss(mu, logvar) + 0.01*TV_loss(model_output)
+    total_loss = (
+        mae_mse_loss(model_output, model_input)
+        + latent_space_kl_divergence_loss(mu, logvar)
+        + 0.01 * TV_loss(model_output)
+    )
     return total_loss
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
 
     # 输入图像 (假设已经通过其他方式加载并预处理为张量)
     x = torch.rand((1, 3, 256, 256))  # 假设生成图像
     y = torch.rand((1, 3, 256, 256))  # 假设目标图像
-    mu=torch.rand((1,20))  # 假设编码器输出的均值
-    logvar=torch.rand((1,20))  # 假设编码器输出的对数方差
+    mu = torch.rand((1, 20))  # 假设编码器输出的均值
+    logvar = torch.rand((1, 20))  # 假设编码器输出的对数方差
 
     # 加载VGG16模型并去掉分类层
     vgg16 = models.vgg16(pretrained=True).features.eval()
 
     # 计算损失
-    loss = compute_total_loss(x,y, mu,logvar,vgg16)
-    print(f'total Loss: {loss.item()}')
+    loss = compute_total_loss(x, y, mu, logvar, vgg16)
+    print(f"total Loss: {loss.item()}")
