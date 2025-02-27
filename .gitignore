@@ -3,3 +3,4 @@ datasets/cifar10
 __pycache__
 *.pyc
 events*
+*.pth

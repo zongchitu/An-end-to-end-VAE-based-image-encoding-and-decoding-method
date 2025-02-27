@@ -6,10 +6,12 @@ from torch.utils.tensorboard import SummaryWriter
 from loss_citeration import compute_total_loss
 from data import get_cifar10_dataloader
 from unet.unet_model import UNet
+import torchvision.models as models
 import torch
 
 device = 0
 writer = SummaryWriter(log_dir="log")
+vgg_model = models.vgg16(pretrained=True).features.eval().to(device)
 
 
 def train(
@@ -28,7 +30,11 @@ def train(
 
         logits, mu, logvar = model(x)
         loss = compute_total_loss(
-            model_output=logits, model_input=x, vgg_model=model, mu=mu, logvar=logvar
+            model_output=logits,
+            model_input=x,
+            vgg_model=vgg_model,
+            mu=mu,
+            logvar=logvar,
         )
         loss.backward()
         optimizer.step()
@@ -44,7 +50,7 @@ def train(
 
 if __name__ == "__main__":
     train_loader, val_loader, test_loader = get_cifar10_dataloader()
-    model = UNet(n_channels=3, n_classes=1, bilinear=True, latent_dim=512).to(device)
+    model = UNet(n_channels=3, n_classes=3, bilinear=True, latent_dim=512).to(device)
     optimizer = Adam(model.parameters(), lr=1e-4)
     scheduler = StepLR(optimizer, step_size=100, gamma=0.1)
 

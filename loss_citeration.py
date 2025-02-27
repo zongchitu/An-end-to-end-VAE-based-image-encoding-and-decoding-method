@@ -123,10 +123,9 @@ def compute_total_loss(model_output, model_input, mu, logvar, vgg_model, layers=
     # MAE,MSE,潜在空间KL散度损失是主要的损失函数，权重大,给1
     # 感知损失,TV损失是辅助的损失函数，权重小，给0.1,0.01（经验参数）
 
-    # 去掉感知损失能够正常运行
-    # total_loss=mae_mse_loss(model_output,model_input) + 0.1*perceptual_loss(model_output,model_input,vgg_model,layers) + latent_space_kl_divergence_loss(mu, logvar) + 0.01*TV_loss(model_output)
     total_loss = (
         mae_mse_loss(model_output, model_input)
+        + 0.1 * perceptual_loss(model_output, model_input, vgg_model, layers)
         + latent_space_kl_divergence_loss(mu, logvar)
         + 0.01 * TV_loss(model_output)
     )
