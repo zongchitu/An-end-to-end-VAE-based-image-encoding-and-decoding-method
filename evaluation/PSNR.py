@@ -22,8 +22,7 @@ def calculate_psnr(original_image, output_image):
 
     # 如果均方误差为零，表示两图像完全相同,提前返回inf，防止后面除零错误
     if mse < 1e-7:
-        # return float('inf')
-        mse = 1e-7
+        return float('inf')
 
     # 计算最大像素值，通常对于8位图像而言是255
     max_pixel = 255.0
