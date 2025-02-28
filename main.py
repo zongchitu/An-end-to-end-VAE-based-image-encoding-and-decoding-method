@@ -90,8 +90,8 @@ def test(
                     origin_image.cpu().numpy().transpose(1, 2, 0),
                     output_image.cpu().numpy().transpose(1, 2, 0),
                 )
-                if psnr == float("inf"):
-                    continue
+                # if psnr == float("inf"):
+                #     continue
                 metric["psnr"].append(psnr)
                 # 计算SSIM
                 ssim = calculate_ssim(
