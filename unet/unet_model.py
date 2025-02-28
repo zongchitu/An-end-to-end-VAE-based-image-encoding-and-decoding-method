@@ -70,7 +70,7 @@ class UNet(nn.Module):
 
 # 测试代码
 if __name__ == "__main__":
-    unet = UNet(n_channels=3, n_classes=1, bilinear=True, latent_dim=512)
+    unet = UNet(n_channels=3, n_classes=3, bilinear=True, latent_dim=512)
     x = torch.randn(1, 3, 32, 32)
     logits, mu, logvar = unet(x)
     print("Logits shape:", logits.size())
