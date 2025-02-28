@@ -15,9 +15,10 @@ from data import denormalize
 import random
 import numpy as np
 import os
+from pathlib import Path
 
+log_dir = Path("log/base")
 device = 0
-writer = SummaryWriter(log_dir="log")
 vgg_model = models.vgg16(pretrained=True).features.eval().to(device)
 
 
@@ -38,6 +39,7 @@ def train(
     loader: DataLoader,
     optimizer: Optimizer,
     scheduler: StepLR,
+    writer: SummaryWriter,
 ):
     for step, (x, y) in enumerate(loader):
         if step >= max_step:
@@ -61,7 +63,7 @@ def train(
         writer.add_scalar("loss", loss.item(), global_step=step)
         if step % 10 == 0:
             print(f"step: {step}, loss: {loss.item()}")
-            torch.save(model.state_dict(), "./log/model_last.pth")
+            torch.save(model.state_dict(), log_dir / "model_last.pth")
     writer.close()
     return model
 
@@ -111,8 +113,15 @@ if __name__ == "__main__":
     seed_all(42)
     train_loader, val_loader, test_loader = get_cifar10_dataloader()
     model = UNet(n_channels=3, n_classes=3, bilinear=True, latent_dim=512).to(device)
-    # optimizer = Adam(model.parameters(), lr=1e-4)
-    # scheduler = StepLR(optimizer, step_size=100, gamma=0.1)
+    optimizer = Adam(model.parameters(), lr=1e-4)
+    scheduler = StepLR(optimizer, step_size=100, gamma=0.1)
 
-    # train(model, 100, train_loader, optimizer, scheduler)
-    test(model, "./log/model_last.pth", test_loader)
+    train(
+        model,
+        100,
+        train_loader,
+        optimizer,
+        scheduler,
+        writer=SummaryWriter(log_dir=log_dir),
+    )
+    test(model, log_dir / "model_last.pth", test_loader)
