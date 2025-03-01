@@ -10,12 +10,22 @@ from .VS_Block import VariationalSampling
 
 # UNet主网络
 class UNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False, latent_dim=128):
+    def __init__(
+        self,
+        n_channels,
+        n_classes,
+        bilinear=False,
+        latent_dim=128,
+        vs_block: bool = True,
+        se_block: bool = True,
+    ):
         super(UNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
         self.latent_dim = latent_dim
+        self.vs_block = vs_block
+        self.se_block = se_block
 
         # 编码器部分
         self.inc = DoubleConv(n_channels, 64)
@@ -26,7 +36,11 @@ class UNet(nn.Module):
         self.down4 = Down(512, 1024 // factor)
 
         # 变分采样模块
-        self.variational = VariationalSampling(1024 // factor, latent_dim)
+        self.variational = (
+            VariationalSampling(1024 // factor, latent_dim)
+            if self.vs_block
+            else lambda x: (x, None, None)
+        )
 
         # 解码器部分
         self.up1 = Up(1024, 512 // factor, bilinear)
@@ -36,11 +50,11 @@ class UNet(nn.Module):
         self.outc = OutConv(64, n_classes)
 
         # SE模块
-        self.se1 = SEBlock(64)
-        self.se2 = SEBlock(128)
-        self.se3 = SEBlock(256)
-        self.se4 = SEBlock(512)
-        self.se5 = SEBlock(1024 // factor)
+        self.se1 = SEBlock(64) if se_block else lambda x: x
+        self.se2 = SEBlock(128) if se_block else lambda x: x
+        self.se3 = SEBlock(256) if se_block else lambda x: x
+        self.se4 = SEBlock(512) if se_block else lambda x: x
+        self.se5 = SEBlock(1024 // factor) if se_block else lambda x: x
 
     def forward(self, x):
         # 编码器
@@ -70,9 +84,16 @@ class UNet(nn.Module):
 
 # 测试代码
 if __name__ == "__main__":
-    unet = UNet(n_channels=3, n_classes=3, bilinear=True, latent_dim=512)
+    unet = UNet(
+        n_channels=3,
+        n_classes=3,
+        bilinear=True,
+        latent_dim=512,
+        se_block=True,
+        vs_block=True,
+    )
     x = torch.randn(1, 3, 32, 32)
     logits, mu, logvar = unet(x)
     print("Logits shape:", logits.size())
-    print("Mu shape:", mu.size())
-    print("Logvar shape:", logvar.size())
+    # print("Mu shape:", mu.size())
+    # print("Logvar shape:", logvar.size())
