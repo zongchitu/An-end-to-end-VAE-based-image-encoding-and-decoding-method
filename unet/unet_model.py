@@ -1,31 +1,17 @@
-""" Full assembly of the parts to form the complete network """
-
 from .unet_parts import *
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from .SE_Block import SEBlock
 from .VS_Block import VariationalSampling
 
 
 # UNet主网络
 class UNet(nn.Module):
-    def __init__(
-        self,
-        n_channels,
-        n_classes,
-        bilinear=False,
-        latent_dim=128,
-        vs_block: bool = True,
-        se_block: bool = True,
-    ):
+    def __init__(self, n_channels, n_classes, bilinear=False, latent_dim=128, se=True, vs=True):
         super(UNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
         self.latent_dim = latent_dim
-        self.vs_block = vs_block
-        self.se_block = se_block
 
         # 编码器部分
         self.inc = DoubleConv(n_channels, 64)
@@ -36,11 +22,7 @@ class UNet(nn.Module):
         self.down4 = Down(512, 1024 // factor)
 
         # 变分采样模块
-        self.variational = (
-            VariationalSampling(1024 // factor, latent_dim)
-            if self.vs_block
-            else lambda x: (x, None, None)
-        )
+        self.variational = VariationalSampling(1024 // factor, latent_dim)
 
         # 解码器部分
         self.up1 = Up(1024, 512 // factor, bilinear)
@@ -50,50 +32,50 @@ class UNet(nn.Module):
         self.outc = OutConv(64, n_classes)
 
         # SE模块
-        self.se1 = SEBlock(64) if se_block else lambda x: x
-        self.se2 = SEBlock(128) if se_block else lambda x: x
-        self.se3 = SEBlock(256) if se_block else lambda x: x
-        self.se4 = SEBlock(512) if se_block else lambda x: x
-        self.se5 = SEBlock(1024 // factor) if se_block else lambda x: x
+        self.se1 = SEBlock(64)
+        self.se2 = SEBlock(128)
+        self.se3 = SEBlock(256)
+        self.se4 = SEBlock(512)
+        self.se5 = SEBlock(1024 // factor)
+
+        self.se = se
+        self.vs = vs
 
     def forward(self, x):
-        # 编码器
-        x1 = self.inc(x)
-        x1 = self.se1(x1)
-        x2 = self.down1(x1)
-        x2 = self.se2(x2)
-        x3 = self.down2(x2)
-        x3 = self.se3(x3)
-        x4 = self.down3(x3)
-        x4 = self.se4(x4)
-        x5 = self.down4(x4)
-        x5 = self.se5(x5)
+        if self.se:
+            # 编码器
+            x1 = self.inc(x)
+            x1 = self.se1(x1)
+            x2 = self.down1(x1)
+            x2 = self.se2(x2)
+            x3 = self.down2(x2)
+            x3 = self.se3(x3)
+            x4 = self.down3(x3)
+            x4 = self.se4(x4)
+            x5 = self.down4(x4)
+            x5 = self.se5(x5)
+        else:
+            x1 = self.inc(x)
+            x2 = self.down1(x1)
+            x3 = self.down2(x2)
+            x4 = self.down3(x3)
+            x5 = self.down4(x4)
 
-        # 变分采样
-        z, mu, logvar = self.variational(x5)
-
-        # 解码器
-        x = self.up1(z, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        logits = self.outc(x)
-
-        return logits, mu, logvar
-
-
-# 测试代码
-if __name__ == "__main__":
-    unet = UNet(
-        n_channels=3,
-        n_classes=3,
-        bilinear=True,
-        latent_dim=512,
-        se_block=True,
-        vs_block=True,
-    )
-    x = torch.randn(1, 3, 32, 32)
-    logits, mu, logvar = unet(x)
-    print("Logits shape:", logits.size())
-    # print("Mu shape:", mu.size())
-    # print("Logvar shape:", logvar.size())
+        if self.vs:
+            # 变分采样
+            z, mu, logvar = self.variational(x5)
+            # 解码器
+            x = self.up1(z, x4)
+            x = self.up2(x, x3)
+            x = self.up3(x, x2)
+            x = self.up4(x, x1)
+            logits = self.outc(x)
+            return logits, mu, logvar
+        else:
+            # 解码器
+            x = self.up1(x5, x4)
+            x = self.up2(x, x3)
+            x = self.up3(x, x2)
+            x = self.up4(x, x1)
+            logits = self.outc(x)
+            return logits
